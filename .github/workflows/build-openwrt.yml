@@ -1,0 +1,187 @@
+name: Build ImmortalWrt for JDCloud AX1800 Pro
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      ssh:
+        description: 'SSH connection to Actions'
+        required: false
+        default: 'false'
+      upload_firmware:
+        description: 'Upload firmware to release'
+        required: false
+        default: 'true'
+
+env:
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: openwrt-24.10
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: configs/jdc-ax1800pro.config
+  DIY_P1_SH: scripts/diy-part1.sh
+  DIY_P2_SH: scripts/diy-part2.sh
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+
+    - name: Free Disk Space
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: false
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
+          bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib \
+          git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev libgmp3-dev \
+          libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libpython3-dev libreadline-dev \
+          libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 \
+          python3 python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig \
+          texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+
+    - name: Clone source code
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+    - name: Load custom feeds
+      run: |
+        [ -e $FEEDS_CONF ] && cp $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
+    - name: Update feeds
+      run: cd openwrt && ./scripts/feeds update -a
+
+    - name: Install feeds
+      run: cd openwrt && ./scripts/feeds install -a
+
+    - name: Load custom configuration
+      run: |
+        [ -e files ] && cp -r files openwrt/files
+        [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+
+    - name: SSH connection to Actions
+      uses: P3TERX/ssh2actions@v1.0.0
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: Download package
+      id: package
+      run: |
+        cd openwrt
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+
+    - name: Compile the firmware
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "status=success" >> $GITHUB_OUTPUT
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+
+    - name: Check space usage
+      if: (!cancelled())
+      run: df -hT
+
+    - name: Organize files
+      id: organize
+      if: steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware directory
+      uses: actions/upload-artifact@main
+      if: steps.organize.outputs.status == 'success' && !cancelled()
+      with:
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
+
+    - name: Generate release tag
+      id: tag
+      if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
+        touch release.txt
+        echo "## 京东云亚瑟 AX1800 Pro OpenWrt 固件" >> release.txt
+        echo "" >> release.txt
+        echo "### 固件信息" >> release.txt
+        echo "- 源码: ImmortalWrt $(cat openwrt/version)" >> release.txt
+        echo "- 编译时间: $(date +"%Y-%m-%d %H:%M")" >> release.txt
+        echo "" >> release.txt
+        echo "### 已包含插件" >> release.txt
+        echo "- PassWall (科学上网)" >> release.txt
+        echo "- udpxy (IPTV组播转单播)" >> release.txt
+        echo "- Lucky 大吉 (DDNS/端口转发)" >> release.txt
+        echo "- FM350-GL 5G 模块支持" >> release.txt
+        echo "" >> release.txt
+        echo "### 默认设置" >> release.txt
+        echo "- IP: 192.168.1.1" >> release.txt
+        echo "- 用户名: root" >> release.txt
+        echo "- 密码: 无 (首次登录请设置)" >> release.txt
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware to release
+      uses: softprops/action-gh-release@v1
+      if: steps.tag.outputs.status == 'success' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        body_path: release.txt
+        files: ${{ env.FIRMWARE }}/*
+
+    - name: Delete workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        retain_days: 1
+        keep_minimum_runs: 3
+
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.3.3
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 5
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
