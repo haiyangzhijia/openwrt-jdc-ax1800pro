@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for JDCloud AX1800 Pro
+name: Build OpenWrt (LEDE) for JDCloud AX1800 Pro
 
 on:
   repository_dispatch:
@@ -8,18 +8,15 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-      upload_firmware:
-        description: 'Upload firmware to release'
-        required: false
-        default: 'true'
 
 env:
-  REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-24.10
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: configs/jdc-ax1800pro.config
   DIY_P1_SH: scripts/diy-part1.sh
   DIY_P2_SH: scripts/diy-part2.sh
+  PATCH_FILE: patches/jdcloud-ax1800-pro.patch
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
@@ -68,6 +65,13 @@ jobs:
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+    - name: Apply JDCloud AX1800 Pro patch
+      run: |
+        cd openwrt
+        echo "应用 JDCloud AX1800 Pro 设备补丁..."
+        patch -p1 < $GITHUB_WORKSPACE/$PATCH_FILE || echo "部分补丁已应用"
+        echo "补丁应用完成"
 
     - name: Load custom feeds
       run: |
@@ -146,7 +150,7 @@ jobs:
         echo "## 京东云亚瑟 AX1800 Pro OpenWrt 固件" >> release.txt
         echo "" >> release.txt
         echo "### 固件信息" >> release.txt
-        echo "- 源码: ImmortalWrt $(cat openwrt/version)" >> release.txt
+        echo "- 源码: Lean's LEDE (coolsnowwolf/lede)" >> release.txt
         echo "- 编译时间: $(date +"%Y-%m-%d %H:%M")" >> release.txt
         echo "" >> release.txt
         echo "### 已包含插件" >> release.txt
@@ -158,7 +162,7 @@ jobs:
         echo "### 默认设置" >> release.txt
         echo "- IP: 192.168.1.1" >> release.txt
         echo "- 用户名: root" >> release.txt
-        echo "- 密码: 无 (首次登录请设置)" >> release.txt
+        echo "- 密码: password" >> release.txt
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release

@@ -1,15 +1,14 @@
-# ImmortalWrt feeds configuration for JDCloud AX1800 Pro
-# 包含官方源和第三方插件源
+# Lean's LEDE feeds configuration for JDCloud AX1800 Pro
 
-# 官方 ImmortalWrt 源
-src-git packages https://github.com/immortalwrt/packages.git;openwrt-24.10
-src-git luci https://github.com/immortalwrt/luci.git;openwrt-24.10
-src-git routing https://github.com/openwrt/routing.git;openwrt-24.10
-src-git telephony https://github.com/openwrt/telephony.git;openwrt-24.10
+# 官方 LEDE 源
+src-git packages https://github.com/coolsnowwolf/packages
+src-git luci https://github.com/coolsnowwolf/luci
+src-git routing https://github.com/coolsnowwolf/routing
+src-git telephony https://github.com/openwrt/telephony.git;openwrt-23.05
 
-# PassWall 科学上网插件 (使用新的 Openwrt-Passwall 组织)
-src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main
-src-git passwall https://github.com/Openwrt-Passwall/openwrt-passwall.git;main
+# PassWall 科学上网插件
+src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main
+src-git passwall https://github.com/xiaorouji/openwrt-passwall.git;main
 
 # Lucky 大吉 (DDNS/端口转发/反向代理)
 src-git lucky https://github.com/gdy666/luci-app-lucky.git;main
