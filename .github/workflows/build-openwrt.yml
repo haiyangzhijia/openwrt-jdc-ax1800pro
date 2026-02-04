@@ -10,9 +10,9 @@ on:
         default: 'false'
 
 env:
-  # 使用 LiBwrt-op/openwrt-6.x 源 (ever4Yang 成功构建 JDCloud AX1800 Pro 使用此源)
-  REPO_URL: https://github.com/LiBwrt-op/openwrt-6.x
-  REPO_BRANCH: main
+  # 使用官方 ImmortalWrt 源 (安全可信)
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: master
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: configs/jdc-ax1800pro.config
   DIY_P1_SH: scripts/diy-part1.sh
@@ -61,7 +61,6 @@ jobs:
         sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
         sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
         sudo -E apt-get -y update
-        sudo -E apt-get -y install $(curl -fsSL is.gd/depends_ubuntu_2204)
         sudo -E apt-get -y install ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential \
           bzip2 ccache cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib \
           git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libfuse-dev libglib2.0-dev libgmp3-dev \
@@ -160,12 +159,12 @@ jobs:
         echo "## 京东云亚瑟 AX1800 Pro OpenWrt 固件" >> release.txt
         echo "" >> release.txt
         echo "### 固件信息" >> release.txt
-        echo "- 源码: LiBwrt-op/openwrt-6.x" >> release.txt
-        echo "- 设备: JDCloud AX1800 Pro" >> release.txt
+        echo "- 源码: ImmortalWrt (官方安全源)" >> release.txt
+        echo "- 设备: JDCloud RE-SS-01 (AX1800 Pro)" >> release.txt
         echo "- 编译时间: $(date +"%Y-%m-%d %H:%M")" >> release.txt
         echo "" >> release.txt
         echo "### 已包含插件" >> release.txt
-        echo "- SSR Plus+ (科学上网)" >> release.txt
+        echo "- PassWall (科学上网)" >> release.txt
         echo "- udpxy (IPTV组播转单播)" >> release.txt
         echo "- Lucky 大吉 (DDNS/端口转发)" >> release.txt
         echo "- FM350-GL 5G 模块支持" >> release.txt
@@ -173,7 +172,7 @@ jobs:
         echo "### 默认设置" >> release.txt
         echo "- IP: 192.168.1.1" >> release.txt
         echo "- 用户名: root" >> release.txt
-        echo "- 密码: password" >> release.txt
+        echo "- 密码: (空)" >> release.txt
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release
