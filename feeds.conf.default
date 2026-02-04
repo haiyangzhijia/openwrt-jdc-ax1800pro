@@ -6,9 +6,8 @@ src-git luci https://github.com/coolsnowwolf/luci
 src-git routing https://github.com/coolsnowwolf/routing
 src-git telephony https://github.com/openwrt/telephony.git;openwrt-23.05
 
-# PassWall 科学上网插件
-src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main
-src-git passwall https://github.com/xiaorouji/openwrt-passwall.git;main
+# PassWall 科学上网插件 (使用 fw876/helloworld 替代，LEDE 社区常用)
+src-git helloworld https://github.com/fw876/helloworld.git;master
 
 # Lucky 大吉 (DDNS/端口转发/反向代理)
 src-git lucky https://github.com/gdy666/luci-app-lucky.git;main

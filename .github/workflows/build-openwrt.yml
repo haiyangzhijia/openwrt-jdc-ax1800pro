@@ -16,7 +16,6 @@ env:
   CONFIG_FILE: configs/jdc-ax1800pro.config
   DIY_P1_SH: scripts/diy-part1.sh
   DIY_P2_SH: scripts/diy-part2.sh
-  PATCH_FILE: patches/jdcloud-ax1800-pro.patch
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
@@ -65,13 +64,6 @@ jobs:
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-
-    - name: Apply JDCloud AX1800 Pro patch
-      run: |
-        cd openwrt
-        echo "应用 JDCloud AX1800 Pro 设备补丁..."
-        patch -p1 < $GITHUB_WORKSPACE/$PATCH_FILE || echo "部分补丁已应用"
-        echo "补丁应用完成"
 
     - name: Load custom feeds
       run: |
@@ -151,10 +143,11 @@ jobs:
         echo "" >> release.txt
         echo "### 固件信息" >> release.txt
         echo "- 源码: Lean's LEDE (coolsnowwolf/lede)" >> release.txt
+        echo "- 设备: JDCloud RE-SS-01 (AX1800 Pro)" >> release.txt
         echo "- 编译时间: $(date +"%Y-%m-%d %H:%M")" >> release.txt
         echo "" >> release.txt
         echo "### 已包含插件" >> release.txt
-        echo "- PassWall (科学上网)" >> release.txt
+        echo "- SSR Plus+ (科学上网)" >> release.txt
         echo "- udpxy (IPTV组播转单播)" >> release.txt
         echo "- Lucky 大吉 (DDNS/端口转发)" >> release.txt
         echo "- FM350-GL 5G 模块支持" >> release.txt
