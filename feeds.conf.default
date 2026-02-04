@@ -12,3 +12,6 @@ src-git passwall https://github.com/xiaorouji/openwrt-passwall.git;main
 
 # Lucky 大吉 (DDNS/端口转发)
 src-git lucky https://github.com/gdy666/luci-app-lucky.git;main
+
+# Bandix 带宽监控
+src-git bandix https://github.com/timsaya/luci-app-bandix.git;main
