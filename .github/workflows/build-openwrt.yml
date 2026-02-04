@@ -43,12 +43,10 @@ jobs:
         docker-images: true
         swap-storage: false
 
-    - name: Combine Disks
-      uses: easimon/maximize-build-space@master
-      with:
-        swap-size-mb: 1024
-        temp-reserve-mb: 100
-        root-reserve-mb: 1024
+    - name: Disk Space After Cleanup
+      run: df -hT
+
+
 
     - name: Checkout
       uses: actions/checkout@main
