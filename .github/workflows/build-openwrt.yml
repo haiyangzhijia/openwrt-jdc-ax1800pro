@@ -41,7 +41,7 @@ jobs:
         haskell: true
         large-packages: true
         docker-images: true
-        swap-storage: true
+        swap-storage: false
 
     - name: Combine Disks
       uses: easimon/maximize-build-space@master
