@@ -1,12 +1,10 @@
 #!/bin/bash
-#
-# DIY Part 1: feeds 更新之前执行
-#
+# DIY Part 1: Execute before updating feeds
 
-echo "=========================================="
-echo "DIY Part 1: 添加第三方源"
-echo "=========================================="
+echo "DIY Part 1: Add custom feeds"
+# Passwall and other feeds are already in feeds.conf.default
 
-# PassWall 源已在 feeds.conf.default 中配置
+# Add any extra logic here if needed
 
-echo "DIY Part 1 完成!"
+echo "DIY Part 1: Done"
+exit 0
