@@ -69,6 +69,8 @@ jobs:
         sudo -E systemctl daemon-reload
         sudo -E apt-get -y autoremove --purge
         sudo -E apt-get -y clean
+        # Fix fail2ban build: Install host Python setuptools/wheel/build
+        sudo pip3 install --upgrade pip setuptools wheel build
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
