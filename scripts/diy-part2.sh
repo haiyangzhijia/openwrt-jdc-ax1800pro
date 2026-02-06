@@ -24,4 +24,17 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/M
 echo "Setting overlay partition size to 1GB..."
 sed -i 's/CONFIG_TARGET_ROOTFS_PARTSIZE=.*/CONFIG_TARGET_ROOTFS_PARTSIZE=1024/' .config 2>/dev/null || true
 
+# Fix fail2ban build error (Cannot import setuptools.build_meta)
+# Ensure host python dependencies are available
+echo "Fixing fail2ban build dependencies..."
+if [ -f feeds/packages/net/fail2ban/Makefile ]; then
+    # Add host python dependencies
+    if grep -q "PKG_BUILD_DEPENDS" feeds/packages/net/fail2ban/Makefile; then
+        sed -i 's/PKG_BUILD_DEPENDS:=/PKG_BUILD_DEPENDS:=python3\/host python-setuptools\/host python-wheel\/host /' feeds/packages/net/fail2ban/Makefile
+    else
+        sed -i '/include $(TOPDIR)\/rules.mk/a PKG_BUILD_DEPENDS:=python3/host python-setuptools/host python-wheel/host' feeds/packages/net/fail2ban/Makefile
+    fi
+    # Force use of pip install instead of setup.py if needed, or ensure build backend is present
+fi
+
 echo "DIY Part 2: Done"
