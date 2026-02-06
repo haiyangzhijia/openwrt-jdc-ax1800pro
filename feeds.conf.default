@@ -8,5 +8,5 @@ src-git telephony https://github.com/openwrt/telephony.git
 # Lucky (DDNS/Port Forwarding)
 src-git lucky https://github.com/gdy666/luci-app-lucky.git;main
 
-# Bandix (Bandwidth Monitoring)
-src-git bandix https://github.com/timsaya/luci-app-bandix.git;main
+# Bandix (Bandwidth Monitoring) - 已禁用，包不完整
+# src-git bandix https://github.com/timsaya/luci-app-bandix.git;main
