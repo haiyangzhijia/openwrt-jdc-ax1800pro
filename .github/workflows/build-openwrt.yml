@@ -69,8 +69,10 @@ jobs:
         sudo -E systemctl daemon-reload
         sudo -E apt-get -y autoremove --purge
         sudo -E apt-get -y clean
-        # Fix fail2ban build: Install host Python setuptools/wheel/build
-        sudo pip3 install --upgrade pip setuptools wheel build
+        # Fix fail2ban build: Install host Python build dependencies
+        # This fixes "Cannot import setuptools.build_meta" error
+        sudo pip3 install --upgrade pip
+        sudo pip3 install --upgrade setuptools wheel build pyproject-hooks
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
