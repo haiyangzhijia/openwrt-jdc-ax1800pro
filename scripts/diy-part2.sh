@@ -24,16 +24,6 @@ sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/M
 echo "Clearing root password..."
 sed -i 's/root:.*/root:::0:99999:7:::/g' package/base-files/files/etc/shadow
 
-# Try to enable factory image generation
-echo "Enabling factory image for jdcloud_re-ss-01..."
-grep -r "jdcloud_re-ss-01" target/linux/qualcommax/image/ 2>/dev/null | cut -d: -f1 | sort | uniq | while read file; do
-    sed -i '/jdcloud_re-ss-01/,/IMAGES/ s/sysupgrade.bin/sysupgrade.bin factory.bin/' "$file"
-done
-
-# Modify overlay partition size (1GB)
-echo "Setting overlay partition size to 1GB..."
-sed -i 's/CONFIG_TARGET_ROOTFS_PARTSIZE=.*/CONFIG_TARGET_ROOTFS_PARTSIZE=1024/' .config 2>/dev/null || true
-
 # Fix fail2ban build error (Cannot import setuptools.build_meta)
 # Ensure host python dependencies are available
 echo "Fixing fail2ban build dependencies..."
