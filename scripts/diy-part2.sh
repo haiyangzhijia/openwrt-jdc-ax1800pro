@@ -20,6 +20,10 @@ sed -i "s/UTC/Asia\/Shanghai/g" package/base-files/files/bin/config_generate
 echo "Setting default theme to Argon..."
 sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile 2>/dev/null || true
 
+# Clear root password (ensure empty password)
+echo "Clearing root password..."
+sed -i 's/root:.*/root:::0:99999:7:::/g' package/base-files/files/etc/shadow
+
 # Modify overlay partition size (1GB)
 echo "Setting overlay partition size to 1GB..."
 sed -i 's/CONFIG_TARGET_ROOTFS_PARTSIZE=.*/CONFIG_TARGET_ROOTFS_PARTSIZE=1024/' .config 2>/dev/null || true
