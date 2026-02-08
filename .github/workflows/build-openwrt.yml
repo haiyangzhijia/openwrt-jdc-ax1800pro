@@ -145,6 +145,8 @@ jobs:
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
+        # Ensure a factory.bin exists
+        find . -name "*sysupgrade.bin" -exec cp {} openwrt-factory.bin \;
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_OUTPUT
 
