@@ -1,0 +1,121 @@
+name: Compile Packages Only
+
+on:
+  workflow_dispatch:
+
+env:
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: master
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE: configs/jdc-ax1800pro.config
+  DIY_P1_SH: scripts/diy-part1.sh
+  DIY_P2_SH: scripts/diy-part2.sh
+  TZ: Asia/Shanghai
+
+jobs:
+  compile_packages:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
+        sudo -E apt-get -y update
+        sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc-s1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx-ucl libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf wget ccache curl swig
+        sudo pip3 install --upgrade pip setuptools wheel build pyproject-hooks
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+
+    - name: Clone source code
+      working-directory: /workdir
+      run: |
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+    - name: Load custom feeds
+      run: |
+        [ -e $FEEDS_CONF ] && cp $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
+    - name: Update feeds
+      run: cd openwrt && ./scripts/feeds update -a
+
+    - name: Install feeds
+      run: cd openwrt && ./scripts/feeds install -a
+
+    - name: Load custom configuration
+      run: |
+        [ -e files ] && cp -r files openwrt/files
+        [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+
+    - name: Configure for Packages
+      run: |
+        cd openwrt
+        # Force enable packages we want to compile as modules (M)
+        # PassWall
+        sed -i 's/# CONFIG_PACKAGE_luci-app-passwall is not set/CONFIG_PACKAGE_luci-app-passwall=m/' .config
+        echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
+        echo "CONFIG_PACKAGE_xray-core=m" >> .config
+        echo "CONFIG_PACKAGE_hysteria=m" >> .config
+        # Python
+        sed -i 's/# CONFIG_PACKAGE_python3 is not set/CONFIG_PACKAGE_python3=m/' .config
+        echo "CONFIG_PACKAGE_python3=m" >> .config
+        # Samba
+        sed -i 's/# CONFIG_PACKAGE_samba4-server is not set/CONFIG_PACKAGE_samba4-server=m/' .config
+        echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
+        # Fail2Ban
+        sed -i 's/# CONFIG_PACKAGE_luci-app-fail2ban is not set/CONFIG_PACKAGE_luci-app-fail2ban=m/' .config
+        # FileBrowser
+        echo "CONFIG_PACKAGE_luci-app-filebrowser=m" >> .config
+        
+        make defconfig
+
+    - name: Compile Packages
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        # Compile specific packages
+        make package/feeds/packages/net/xray-core/compile -j$(nproc)
+        make package/feeds/luci/applications/luci-app-passwall/compile -j$(nproc)
+        make package/feeds/packages/lang/python/python3/compile -j$(nproc)
+        make package/feeds/luci/applications/luci-app-samba4/compile -j$(nproc)
+        make package/feeds/luci/applications/luci-app-filebrowser/compile -j$(nproc)
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Organize IPKs
+      if: steps.compile.outputs.status == 'success'
+      run: |
+        cd openwrt/bin/packages
+        mkdir -p $GITHUB_WORKSPACE/plugins
+        find . -name "*.ipk" -exec cp {} $GITHUB_WORKSPACE/plugins/ \;
+        cd $GITHUB_WORKSPACE
+        # Filter only relevant plugins to avoid huge artifact
+        mkdir -p final_plugins
+        cp plugins/*passwall* final_plugins/ 2>/dev/null || true
+        cp plugins/*xray* final_plugins/ 2>/dev/null || true
+        cp plugins/*hysteria* final_plugins/ 2>/dev/null || true
+        cp plugins/*python3* final_plugins/ 2>/dev/null || true
+        cp plugins/*samba* final_plugins/ 2>/dev/null || true
+        cp plugins/*filebrowser* final_plugins/ 2>/dev/null || true
+        # Copy dependencies (this is tricky, better copy all and let user install with opkg install *.ipk)
+        # Actually, let's just zip everything
+        zip -r plugins_bundle.zip plugins
+
+    - name: Upload Plugins
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success'
+      with:
+        name: OpenWrt_Plugins_Bundle
+        path: plugins_bundle.zip
